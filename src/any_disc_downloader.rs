@@ -270,7 +270,6 @@ impl AnyDiscDownloader {
         }
         });
         let music_disc_11_vec = music_disc_11["model"]["entries"].as_array_mut().unwrap();
-
         let mut sounds = json!({});
         let sounds_obj = sounds.as_object_mut().unwrap();
 
@@ -324,7 +323,7 @@ impl AnyDiscDownloader {
                 //Create disc in album
                 if discs["albums"]
                     .get(disc["album"].as_str().unwrap())
-                    .is_none()
+                    .is_some()
                 {
                     let disc_file = discs["albums"][disc["album"].as_str().unwrap()]["disc_file"]
                         .as_str()

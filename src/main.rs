@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 mod album;
 mod any_disc_downloader;
 mod disc;
@@ -153,6 +153,12 @@ impl AnyDiscApp {
         }
     }
     fn validate(&mut self) -> bool {
+        if self.ogg_file_names.len() != self.ogg_paths.len() {
+            return false;
+        }
+        if self.png_file_names.len() != self.png_paths.len() {
+            return false;
+        }
         for song in self.ogg_paths.iter() {
             if !song.exists() {
                 return false;
@@ -190,7 +196,6 @@ impl AnyDiscApp {
             self.upload_status = 0;
             return;
         }
-
         //make discs.json complete
         let mut discs_json = json!({
             "list" : [],
@@ -231,8 +236,7 @@ impl AnyDiscApp {
         );
         match download {
             Ok(_) => self.upload_status = 2,
-            Err(str) => {
-                println!("{}", str);
+            Err(_) => {
                 self.upload_status = 0;
             }
         }
@@ -406,6 +410,9 @@ impl eframe::App for AnyDiscApp {
                                     self.ogg_file_names.insert(ogg_file_name);
                                 }
                             }
+                            if self.ogg_file_names.len() != self.ogg_paths.len(){
+                                songs_header_ui.label(egui::RichText::new("* Duplicates Found").color(egui::Color32::RED));
+                            }
                         });
                         songs_header_ui.add_space(HEADER_GAP);
                     });
@@ -416,18 +423,27 @@ impl eframe::App for AnyDiscApp {
                     egui::ScrollArea::both().auto_shrink([false, false]).show(
                         songs_ui,
                         |songs_ui| {
+                            let path_vec = ogg_paths_copy.iter().map(|i| i.file_name().unwrap().to_str().unwrap());
                             for song in ogg_paths_copy.iter() {
                                 let song_str =
                                     song.file_name().expect("could not move path to string").to_str().unwrap();
                                 songs_ui.horizontal(|song_ui|{
+                                    let duplicate = path_vec.clone().filter(|i| *i == song_str).count() > 1;
+                                    let color = match duplicate {
+                                        false => egui::Color32::PLACEHOLDER,
+                                        true => egui::Color32::RED
+                                    };
                                     song_ui.add(
-                                    egui::Label::new(
+                                    egui::Label::new(egui::RichText::new(
                                         song_str.to_string()
+                                    ).color(color)
                                     )
                                     .extend(),
                                     );
                                     if song_ui.button("Remove").clicked() {
-                                        self.ogg_file_names.remove(song_str);
+                                        if !duplicate{
+                                            self.ogg_file_names.remove(song_str);
+                                        }
                                         removed_songs.insert(song);
                                     }
                                     if !song.exists(){
@@ -457,6 +473,9 @@ impl eframe::App for AnyDiscApp {
                                     self.png_file_names.insert(png_file_name);
                                 }
                             }
+                            if self.png_file_names.len() != self.png_paths.len(){
+                                images_header_ui.label(egui::RichText::new("* Duplicates Found").color(egui::Color32::RED));
+                            }
                         });
                         images_header_ui.add_space(HEADER_GAP);
                     });
@@ -468,19 +487,27 @@ impl eframe::App for AnyDiscApp {
                     egui::ScrollArea::both().auto_shrink([false, false]).show(
                         images_ui,
                         |images_ui| {
+                            let path_vec = png_paths_copy.iter().map(|i| i.file_name().unwrap().to_str().unwrap());
                             for image in png_paths_copy.iter() {
                                 let image_str =
                                     image.file_name().expect("could not move path to string").to_str().unwrap();
                                 images_ui.horizontal(|image_ui|{
+                                    let duplicate = path_vec.clone().filter(|i| *i == image_str).count() > 1;
+                                    let color = match duplicate{
+                                        false => egui::Color32::PLACEHOLDER,
+                                        true => egui::Color32::RED
+                                    };
                                     image_ui.add(
                                     egui::Label::new(egui::RichText::new(
                                         image_str
                                             .to_string()
-                                        ))
+                                        ).color(color))
                                         .extend(),
                                     );
                                     if image_ui.button("Remove").clicked() {
-                                        self.png_file_names.remove(image_str);
+                                        if !duplicate{
+                                            self.png_file_names.remove(image_str);
+                                        }
                                         removed_images.insert(image);
                                     }
                                     if !image.exists(){
@@ -508,7 +535,6 @@ impl eframe::App for AnyDiscApp {
                             create_ui.add_space(10.0);
                             create_ui.horizontal(|create_ui| {
                                 if create_ui.button("Create Packs").clicked() {
-                                    self.upload_status = 1;
                                     self.upload_data();
                                 }
                                 if self.upload_status == 0 {
