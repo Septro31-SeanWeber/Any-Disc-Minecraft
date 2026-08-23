@@ -30,9 +30,8 @@ fn write_to_json(path: String, json_val: &Value) -> Result<(), String> {
         Err(e) => return Err(format!("Json to String Error: {}", e).to_string()),
         Ok(s) => s,
     };
-    match file.write_all(json_string.as_bytes()) {
-        Err(e) => return Err(format!("File Write Error{}", e).to_string()),
-        Ok(_) => {}
+    if let Err(e) = file.write_all(json_string.as_bytes()) {
+        return Err(format!("File Write Error{}", e).to_string());
     }
     Ok(())
 }
@@ -286,9 +285,9 @@ impl AnyDiscDownloader {
 
         for disc in disc_array {
             //Only check albums for sizes
-            if disc.get("album") != None && disc.get("weight") == None {
+            if disc.get("album").is_some() && disc.get("weight").is_none() {
                 //First occurence of album check
-                if albums.get(disc["album"].as_str().unwrap()) == None {
+                if albums.get(disc["album"].as_str().unwrap()).is_none() {
                     albums[disc["album"].as_str().unwrap()] = json!(0.0);
                 }
 
@@ -301,11 +300,10 @@ impl AnyDiscDownloader {
             }
         }
 
-        let mut i = 0;
         //Now update each disc
-        for disc in disc_array {
-            let file_name = format!("{}", disc["file_name"].clone().as_str().unwrap());
-            let name = format!("{}", disc["name"].clone().as_str().unwrap());
+        for (i, disc) in disc_array.iter().enumerate() {
+            let file_name = disc["file_name"].clone().as_str().unwrap().to_string();
+            let name = disc["name"].clone().as_str().unwrap().to_string();
             let path = format!(
                 "download_data/any_disc_rp/assets/minecraft/sounds/records/{}.ogg",
                 file_name
@@ -315,42 +313,34 @@ impl AnyDiscDownloader {
             let mut weight = max_weight;
             //Create Song
 
-            match create_jukebox_song_json(&file_name, &name, &length) {
-                Err(s) => {
-                    return Err(format!(
-                        "Failed to create jukebox_song_json ({}), error: {}",
-                        file_name, s
-                    ));
-                }
-                Ok(_) => {}
+            if let Err(s) = create_jukebox_song_json(&file_name, &name, &length) {
+                return Err(format!(
+                    "Failed to create jukebox_song_json ({}), error: {}",
+                    file_name, s
+                ));
             }
 
-            if disc.get("album") != None && disc["album"].as_str().unwrap() != "" {
+            if disc.get("album").is_some() && disc["album"].as_str().unwrap() != "" {
                 //Create disc in album
-                if discs["albums"].get(disc["album"].as_str().unwrap()) != None {
-                    let disc_file = format!(
-                        "{}",
-                        discs["albums"][disc["album"].as_str().unwrap()]["disc_file"]
-                            .as_str()
-                            .unwrap()
-                    );
-                    match create_items_json(&disc_file, &file_name) {
-                        Err(s) => {
-                            return Err(format!(
-                                "Failed to create items_json ({}), error: {}",
-                                file_name, s
-                            ));
-                        }
-                        Ok(_) => {}
+                if discs["albums"]
+                    .get(disc["album"].as_str().unwrap())
+                    .is_none()
+                {
+                    let disc_file = discs["albums"][disc["album"].as_str().unwrap()]["disc_file"]
+                        .as_str()
+                        .unwrap()
+                        .to_string();
+                    if let Err(s) = create_items_json(&disc_file, &file_name) {
+                        return Err(format!(
+                            "Failed to create items_json ({}), error: {}",
+                            file_name, s
+                        ));
                     }
-                    match create_models_json(&disc_file, &file_name) {
-                        Err(s) => {
-                            return Err(format!(
-                                "Failed to create items_json ({}), error: {}",
-                                file_name, s
-                            ));
-                        }
-                        Ok(_) => {}
+                    if let Err(s) = create_models_json(&disc_file, &file_name) {
+                        return Err(format!(
+                            "Failed to create items_json ({}), error: {}",
+                            file_name, s
+                        ));
                     }
                     //only change weights for albums (independent songs should have the max weight)
                     weight = ((max_weight
@@ -366,28 +356,22 @@ impl AnyDiscDownloader {
                 }
             } else {
                 //Create independent disc
-                match create_items_json(&file_name, &file_name) {
-                    Err(s) => {
-                        return Err(format!(
-                            "Failed to create items_json ({}), error: {}",
-                            file_name, s
-                        ));
-                    }
-                    Ok(_) => {}
+                if let Err(s) = create_items_json(&file_name, &file_name) {
+                    return Err(format!(
+                        "Failed to create items_json ({}), error: {}",
+                        file_name, s
+                    ));
                 }
-                match create_models_json(&file_name, &file_name) {
-                    Err(s) => {
-                        return Err(format!(
-                            "Failed to create items_json ({}), error: {}",
-                            file_name, s
-                        ));
-                    }
-                    Ok(_) => {}
+                if let Err(s) = create_models_json(&file_name, &file_name) {
+                    return Err(format!(
+                        "Failed to create items_json ({}), error: {}",
+                        file_name, s
+                    ));
                 }
             }
 
             //check weight override
-            if disc.get("weight") != None {
+            if disc.get("weight").is_some() {
                 weight = disc["weight"].as_f64().unwrap();
             }
 
@@ -437,8 +421,6 @@ impl AnyDiscDownloader {
                 }
                 ),
             );
-
-            i += 1;
         }
 
         //Update jsons
@@ -447,30 +429,26 @@ impl AnyDiscDownloader {
         sounds = json!(sounds_obj);
 
         //write creeper.json, music_disc_11.json, and sounds.json
-        match write_to_json(
-            format!("download_data/any_disc_dp/data/minecraft/loot_table/entities/creeper.json"),
+        if let Err(s) = write_to_json(
+            "download_data/any_disc_dp/data/minecraft/loot_table/entities/creeper.json".to_string(),
             &creeper,
         ) {
-            Err(s) => return Err(format!("Failed to create creeper.json, error: {}", s)),
-            Ok(_) => {}
+            return Err(format!("Failed to create creeper.json, error: {}", s));
         }
-        match write_to_json(
-            format!("download_data/any_disc_rp/assets/minecraft/items/music_disc_11.json"),
+        if let Err(s) = write_to_json(
+            "download_data/any_disc_rp/assets/minecraft/items/music_disc_11.json".to_string(),
             &music_disc_11,
         ) {
-            Err(s) => return Err(format!("Failed to create music_disc_11.json, error: {}", s)),
-            Ok(_) => {}
+            return Err(format!("Failed to create music_disc_11.json, error: {}", s));
         }
-        match write_to_json(
-            format!("download_data/any_disc_rp/assets/minecraft/sounds.json"),
+        if let Err(s) = write_to_json(
+            "download_data/any_disc_rp/assets/minecraft/sounds.json".to_string(),
             &sounds,
         ) {
-            Err(s) => return Err(format!("Failed to create sounds.json, error: {}", s)),
-            Ok(_) => {}
+            return Err(format!("Failed to create sounds.json, error: {}", s));
         }
-        match write_to_json(format!("download_data/discs.json"), &discs) {
-            Err(s) => return Err(format!("Failed to create discs.json, error: {}", s)),
-            Ok(_) => {}
+        if let Err(s) = write_to_json("download_data/discs.json".to_string(), &discs) {
+            return Err(format!("Failed to create discs.json, error: {}", s));
         }
         let source_dir = PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new(
             "download_data",
@@ -487,9 +465,8 @@ impl AnyDiscDownloader {
         // 3. Pass it to the standard ZipWriter
         let mut zip = ZipWriter::new(file);
         // 4. Call the trait method to compress the whole directory hierarchy
-        match zip.create_from_directory(&source_dir) {
-            Err(e) => return Err(format!("Failed to make zip: {}", e)),
-            Ok(_) => {}
+        if let Err(e) = zip.create_from_directory(&source_dir) {
+            return Err(format!("Failed to make zip: {}", e));
         }
 
         //delete excess
