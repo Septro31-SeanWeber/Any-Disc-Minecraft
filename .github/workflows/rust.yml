@@ -26,6 +26,12 @@ jobs:
       - name: Cargo Cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Install Cargo Shear
+        run: cargo install cargo-shear
+
+      - name: Check Unused Dependencies
+        run: cargo shear --fail
+
       - name: Check Formatting
         run: cargo fmt --check
 
