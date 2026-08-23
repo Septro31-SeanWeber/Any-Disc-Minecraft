@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 mod album;
 mod any_disc_downloader;
 mod disc;
@@ -25,11 +26,13 @@ static ALBUM_IMAGE_INDENT: f32 = 0.0;
 
 fn load_icon() -> egui::viewport::IconData {
     // Load image using the `image` crate (or decode raw bytes)
-    let image = image::open(AnyDiscDownloader::get_path_from_exe(Path::new("download_data/any_disc_rp/pack.png")))
-        .expect("Failed to open icon path")
-        .to_rgba8();
+    let image = image::open(AnyDiscDownloader::get_path_from_exe(Path::new(
+        "image_data/pack.png",
+    )))
+    .expect("Failed to open icon path")
+    .to_rgba8();
     let (width, height) = image.dimensions();
-    
+
     egui::viewport::IconData {
         rgba: image.into_raw(),
         width,
@@ -37,15 +40,21 @@ fn load_icon() -> egui::viewport::IconData {
     }
 }
 fn main() {
-    let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new("image_data")));
-        //copy template folder over
-    let _ = std::fs::create_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new("image_data")));
-    AnyDiscDownloader::copy_image_data(Path::new(&AnyDiscDownloader::get_path_from_exe(Path::new("image_data"))));
+    let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new(
+        "image_data",
+    )));
+    //copy template folder over
+    let _ = std::fs::create_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new(
+        "image_data",
+    )));
+    AnyDiscDownloader::copy_image_data(Path::new(&AnyDiscDownloader::get_path_from_exe(
+        Path::new("image_data"),
+    )));
     let native_options = eframe::NativeOptions {
-    viewport: egui::ViewportBuilder::default()
-        .with_inner_size([400.0, 300.0])
-        .with_icon(load_icon()), // Set your custom icon here
-    ..Default::default()
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([400.0, 300.0])
+            .with_icon(load_icon()), // Set your custom icon here
+        ..Default::default()
     };
     let _ = eframe::run_native(
         "AnyDisc",
@@ -70,7 +79,11 @@ impl AnyDiscApp {
         Self {
             upload_status: 1,
             albums: vec![Album::new("default".to_string(), "default".to_string())],
-            png_paths: [PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new("image_data/default.png")))].into_iter().collect(),
+            png_paths: [PathBuf::from(AnyDiscDownloader::get_path_from_exe(
+                Path::new("image_data/default.png"),
+            ))]
+            .into_iter()
+            .collect(),
             png_file_names: ["default.png".to_string()].into_iter().collect(),
             ..Default::default()
         }
@@ -86,7 +99,7 @@ impl AnyDiscApp {
         if let Some(path) = path {
             return path;
         }
-        return vec![];
+        vec![]
     }
     fn select_file_name(extension: &str, title: &str) -> (Option<PathBuf>, String) {
         // create path
@@ -98,13 +111,9 @@ impl AnyDiscApp {
         match path {
             Some(p) => {
                 string = p.file_name().unwrap().to_str().unwrap().to_string();
-                return (
-                    Some(p),
-                    string[0..string.rfind(".").unwrap()]
-                        .to_string(),
-                );
+                (Some(p), string[0..string.rfind(".").unwrap()].to_string())
             }
-            None => return (None, "".to_string()),
+            None => (None, "".to_string()),
         }
     }
     fn get_discs_import_data(&mut self) {
@@ -123,9 +132,9 @@ impl AnyDiscApp {
         self.discs.clear();
         self.albums.clear();
         let json: Value =
-            serde_json::from_str(&disc_string.as_str()).expect("Couldn't convert json to string");
+            serde_json::from_str(disc_string.as_str()).expect("Couldn't convert json to string");
         // validate json (Basic)
-        if json.get("list") != None && json.get("albums") != None {
+        if json.get("list").is_some() && json.get("albums").is_some() {
             let discs_array = json["list"].as_array().unwrap();
             let albums = json["albums"].as_object().unwrap();
             for disc in discs_array {
@@ -145,33 +154,39 @@ impl AnyDiscApp {
     }
     fn validate(&mut self) -> bool {
         for song in self.ogg_paths.iter() {
-            if !song.exists(){
+            if !song.exists() {
                 return false;
             }
         }
         for image in self.png_paths.iter() {
-            if !image.exists(){
+            if !image.exists() {
                 return false;
             }
         }
-        for disc in self.discs.iter(){
+        for disc in self.discs.iter() {
             let needed_file_name = disc.ogg_name.clone() + ".ogg";
-            if !self.ogg_file_names.contains(&needed_file_name){
+            if !self.ogg_file_names.contains(&needed_file_name) {
+                return false;
+            }
+            if disc.album.is_empty()
+                && !self
+                    .png_file_names
+                    .contains(&(disc.ogg_name.clone() + ".png"))
+            {
                 return false;
             }
         }
-        for album in self.albums.iter(){
+        for album in self.albums.iter() {
             let needed_file_name = album.png_name.clone() + ".png";
-            if !self.png_file_names.contains(&needed_file_name){
+            if !self.png_file_names.contains(&needed_file_name) {
                 return false;
             }
         }
-        
-        return true;
+        true
     }
 
     fn upload_data(&mut self) {
-        if !self.validate(){
+        if !self.validate() {
             self.upload_status = 0;
             return;
         }
@@ -185,7 +200,8 @@ impl AnyDiscApp {
         });
         let discs_array = discs_json["list"].as_array_mut().unwrap();
         for disc in self.discs.iter() {
-            if disc.view_name == "" || disc.ogg_name == "" || disc.ogg_name.contains(".") {
+            if disc.view_name.is_empty() || disc.ogg_name.is_empty() || disc.ogg_name.contains(".")
+            {
                 self.upload_status = 0;
                 return;
             }
@@ -199,7 +215,7 @@ impl AnyDiscApp {
         }
         let albums = discs_json.get_mut("albums").unwrap();
         for album in self.albums.iter() {
-            if album.name == "" || album.png_name == "" || album.png_name.contains(".") {
+            if album.name.is_empty() || album.png_name.is_empty() || album.png_name.contains(".") {
                 self.upload_status = 0;
                 return;
             }
@@ -226,7 +242,6 @@ impl AnyDiscApp {
 impl eframe::App for AnyDiscApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            
             ui.heading("AnyDisc");
             ui.add_space(HEADER_GAP);
             ui.columns(5, |columns| {
@@ -263,9 +278,9 @@ impl eframe::App for AnyDiscApp {
                                             disc_ui.text_edit_singleline(&mut disc.view_name);
                                         });
                                         disc_ui.horizontal(|disc_ui| {
-                                            disc_ui.label(format!("Song"));
+                                            disc_ui.label("Song".to_string());
                                             disc_ui.add_space(DISC_SONG_INDENT);
-                                            let button_name = match disc.ogg_name == "" {
+                                            let button_name = match disc.ogg_name.is_empty() {
                                                 true => format!("Select .ogg File for Disc {}", i),
                                                 false => format!("{}.ogg", disc.ogg_name)
                                             };
@@ -284,16 +299,25 @@ impl eframe::App for AnyDiscApp {
                                                 }
                                                 disc.ogg_name = name;
                                             }
-                                            let needed_file_name = disc.ogg_name.clone() + ".ogg";
-                                            if !self.ogg_file_names.contains(&needed_file_name) {
-                                                disc_ui.label(egui::RichText::new("* Can't Find Song!").color(egui::Color32::RED));
+                                            let has_album = !disc.album.is_empty();
+                                            let has_ogg = self.ogg_file_names.contains(&(disc.ogg_name.clone() + ".ogg"));
+                                            let has_png = self.png_file_names.contains(&(disc.ogg_name.clone() + ".png"));
+                                            if !has_ogg{
+                                                if has_album || has_png {
+                                                    disc_ui.label(egui::RichText::new("* Can't Find Song!").color(egui::Color32::RED));
+                                                }else{
+                                                    disc_ui.label(egui::RichText::new("* Can't Find Song or Image!").color(egui::Color32::RED));
+                                                }
+                                            }else{
+                                                if !has_album && !has_png{
+                                                    disc_ui.label(egui::RichText::new("* Can't Find Image!").color(egui::Color32::RED));                                                }
                                             }
                                         });
                                         disc_ui.horizontal(|disc_ui| {
                                             disc_ui.label("Album");
                                             disc_ui.add_space(DISC_ALBUM_INDENT);
                                             egui::ComboBox::new(i, "Choose an Album")
-                                            .selected_text(format!("{}", disc.album))
+                                            .selected_text(disc.album.to_string())
                                             .show_ui(disc_ui, |disc_ui|{
                                                 disc_ui.selectable_value(&mut disc.album, "".to_string(), "");
                                                 for album in self.albums.iter(){
@@ -335,9 +359,9 @@ impl eframe::App for AnyDiscApp {
                                             album_ui.text_edit_singleline(&mut album.name);
                                         });
                                         album_ui.horizontal(|album_ui| {
-                                            album_ui.label(format!("Image"));
+                                            album_ui.label("Image".to_string());
                                             album_ui.add_space(ALBUM_IMAGE_INDENT);
-                                            let button_name = match album.png_name == "" {
+                                            let button_name = match album.png_name.is_empty() {
                                                 true => format!("Select .png File for Album {}", i),
                                                 false => format!("{}.png", album.png_name)
                                             };
@@ -368,7 +392,6 @@ impl eframe::App for AnyDiscApp {
                         },
                     );
                 });
-                
                 //SONGS COLUMN
                 columns[1].push_id(5, |songs_header_ui| {
                     egui::ScrollArea::horizontal().show(songs_header_ui, |songs_header_ui| {
@@ -388,26 +411,36 @@ impl eframe::App for AnyDiscApp {
                     });
                 });
                 columns[1].push_id(1, |songs_ui| {
+                    let mut removed_songs: HashSet<&PathBuf> = Default::default();
+                    let ogg_paths_copy = self.ogg_paths.clone();
                     egui::ScrollArea::both().auto_shrink([false, false]).show(
                         songs_ui,
                         |songs_ui| {
-                            for song in self.ogg_paths.iter() {
+                            for song in ogg_paths_copy.iter() {
                                 let song_str =
                                     song.file_name().expect("could not move path to string").to_str().unwrap();
-                                songs_ui.add(
-                                    egui::Label::new(format!(
-                                        "{}",
-                                        song_str
-                                            .to_string()
-                                    ))
+                                songs_ui.horizontal(|song_ui|{
+                                    song_ui.add(
+                                    egui::Label::new(
+                                        song_str.to_string()
+                                    )
                                     .extend(),
-                                );
+                                    );
+                                    if song_ui.button("Remove").clicked() {
+                                        self.ogg_file_names.remove(song_str);
+                                        removed_songs.insert(song);
+                                    }
+                                    if !song.exists(){
+                                        song_ui.label(egui::RichText::new("* Can't find File!").color(egui::Color32::RED));
+                                    }
+                                });
                                 songs_ui
                                     .label(egui::RichText::new(format!("[{}]", song.to_str().unwrap())).small());
                                 songs_ui.add_space(ELEMENT_GAP);
                             }
                         },
                     );
+                    self.ogg_paths.retain(|i| {!removed_songs.contains(i)});
                 });
 
                 //IMAGES COLUMN
@@ -429,26 +462,39 @@ impl eframe::App for AnyDiscApp {
                     });
                 });
                 columns[0].push_id(0, |images_ui| {
+                    let mut removed_images: HashSet<&PathBuf> = Default::default();
+                    let png_paths_copy = self.png_paths.clone();
+                    {
                     egui::ScrollArea::both().auto_shrink([false, false]).show(
                         images_ui,
                         |images_ui| {
-                            for image in self.png_paths.iter() {
+                            for image in png_paths_copy.iter() {
                                 let image_str =
                                     image.file_name().expect("could not move path to string").to_str().unwrap();
-                                images_ui.add(
-                                    egui::Label::new(egui::RichText::new(format!(
-                                        "{}",
+                                images_ui.horizontal(|image_ui|{
+                                    image_ui.add(
+                                    egui::Label::new(egui::RichText::new(
                                         image_str
                                             .to_string()
-                                    )))
-                                    .extend(),
-                                );
+                                        ))
+                                        .extend(),
+                                    );
+                                    if image_ui.button("Remove").clicked() {
+                                        self.png_file_names.remove(image_str);
+                                        removed_images.insert(image);
+                                    }
+                                    if !image.exists(){
+                                        image_ui.label(egui::RichText::new("* Can't find File!").color(egui::Color32::RED));
+                                    }
+                                });
                                 images_ui
                                     .label(egui::RichText::new(format!("[{}]", image.to_str().unwrap())).small());
                                 images_ui.add_space(ELEMENT_GAP);
                             }
                         },
                     );
+                    }
+                    self.png_paths.retain(|i| {!removed_images.contains(i)});
                 });
 
                 //CREATION COLUMN
@@ -457,7 +503,7 @@ impl eframe::App for AnyDiscApp {
                         create_ui,
                         |create_ui| {
                             create_ui.label(
-                                "*discs with empty albums will assume the png and ogg files are the same name",
+                                "*discs with empty albums require a .png file of the same name as their .ogg file",
                             );
                             create_ui.add_space(10.0);
                             create_ui.horizontal(|create_ui| {

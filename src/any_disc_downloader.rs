@@ -140,9 +140,13 @@ impl AnyDiscDownloader {
         images: HashSet<PathBuf>,
     ) -> Result<(), String> {
         //delete download_data content
-        let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new("download_data")));
+        let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new(
+            "download_data",
+        )));
         //copy template folder over
-        AnyDiscDownloader::copy_template_data(Path::new(&AnyDiscDownloader::get_path_from_exe(Path::new("download_data"))));
+        AnyDiscDownloader::copy_template_data(Path::new(&AnyDiscDownloader::get_path_from_exe(
+            Path::new("download_data"),
+        )));
         //copy songs
         let song_folder_string = AnyDiscDownloader::get_path_from_exe(Path::new(
             "download_data/any_disc_rp/assets/minecraft/sounds/records",
@@ -468,24 +472,30 @@ impl AnyDiscDownloader {
             Err(s) => return Err(format!("Failed to create discs.json, error: {}", s)),
             Ok(_) => {}
         }
-        let source_dir = PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new("download_data")));
-        let target_zip = PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new("any_disc.zip")));
+        let source_dir = PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new(
+            "download_data",
+        )));
+        let target_zip = PathBuf::from(AnyDiscDownloader::get_path_from_exe(Path::new(
+            "any_disc.zip",
+        )));
 
         // 2. Create the target physical file
-        let file = match File::create(&target_zip){
+        let file = match File::create(&target_zip) {
             Ok(f) => f,
-            Err(e) => return Err(format!("Failed to create initial empty zip: {}", e))
+            Err(e) => return Err(format!("Failed to create initial empty zip: {}", e)),
         };
         // 3. Pass it to the standard ZipWriter
         let mut zip = ZipWriter::new(file);
         // 4. Call the trait method to compress the whole directory hierarchy
-        match zip.create_from_directory(&source_dir){
-          Err(e) => return Err(format!("Failed to make zip: {}", e)),
-          Ok(_) => {}
+        match zip.create_from_directory(&source_dir) {
+            Err(e) => return Err(format!("Failed to make zip: {}", e)),
+            Ok(_) => {}
         }
-        
+
         //delete excess
-        let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new("download_data")));
+        let _ = fs::remove_dir_all(AnyDiscDownloader::get_path_from_exe(Path::new(
+            "download_data",
+        )));
         Ok(())
     }
 }
