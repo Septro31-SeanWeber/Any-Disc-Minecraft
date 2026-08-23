@@ -1,0 +1,12 @@
+{
+  "model": {
+    "entries": [],
+    "fallback": {
+      "model": "minecraft:item/music_disc_11",
+      "type": "minecraft:model"
+    },
+    "index": 0,
+    "property": "minecraft:custom_model_data",
+    "type": "minecraft:range_dispatch"
+  }
+}
