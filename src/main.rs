@@ -7,8 +7,8 @@ use album::*;
 use any_disc_downloader::*;
 use disc::*;
 use eframe::egui;
-use serde_json::*;
-use std::path::*;
+use serde_json::{Value, json};
+use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
 
 static DISC_SONG_INDENT: f32 = 9.0;
