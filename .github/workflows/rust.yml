@@ -29,6 +29,9 @@ jobs:
       - name: Install Cargo Shear
         run: cargo install cargo-shear
 
+      - name: Cargo Clean
+        run: cargo clean
+
       - name: Check Unused Dependencies
         run: cargo shear
 
@@ -42,7 +45,7 @@ jobs:
         run: cargo test --verbose
 
       - name: Build Windows Release Binary
-        run: cargo build --release --verbose --target x86_64-pc-windows-msvc
+        run: cargo build --release -vv --target x86_64-pc-windows-msvc
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
