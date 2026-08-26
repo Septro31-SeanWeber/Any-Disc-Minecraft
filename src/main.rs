@@ -52,7 +52,7 @@ fn main() {
     )));
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([400.0, 300.0])
+            .with_maximized(true)
             .with_icon(load_icon()), // Set your custom icon here
         ..Default::default()
     };
@@ -72,6 +72,7 @@ struct AnyDiscApp {
     ogg_file_names: HashSet<String>,
     png_file_names: HashSet<String>,
     upload_status: i8,
+    import_status: bool,
 }
 
 impl AnyDiscApp {
@@ -85,6 +86,7 @@ impl AnyDiscApp {
             .into_iter()
             .collect(),
             png_file_names: ["default.png".to_string()].into_iter().collect(),
+            import_status: true,
             ..Default::default()
         }
     }
@@ -117,6 +119,7 @@ impl AnyDiscApp {
         }
     }
     fn get_discs_import_data(&mut self) {
+        self.import_status = false;
         // create path
         let path = rfd::FileDialog::new()
             .set_title("select a json")
@@ -129,30 +132,55 @@ impl AnyDiscApp {
         } else {
             return;
         }
-        self.discs.clear();
-        self.albums.clear();
         let json: Value =
             serde_json::from_str(disc_string.as_str()).expect("Couldn't convert json to string");
         // validate json (Basic)
-        if json.get("list").is_some() && json.get("albums").is_some() {
-            let discs_array = json["list"].as_array().unwrap();
-            let albums = json["albums"].as_object().unwrap();
-            for disc in discs_array {
-                self.discs.push(Disc::new(
-                    disc["name"].as_str().unwrap_or("").to_string(),
-                    disc["file_name"].as_str().unwrap_or("").to_string(),
-                    disc["album"].as_str().unwrap_or("").to_string(),
-                ));
-            }
-            for (key, val) in albums.iter() {
-                self.albums.push(Album::new(
-                    key.to_string(),
-                    val["disc_file"].as_str().unwrap().to_string(),
-                ));
+        if !(json.get("list").is_some()
+            && json["list"].is_array()
+            && json.get("albums").is_some()
+            && json["albums"].is_object())
+        {
+            return;
+        }
+        let discs_array = json["list"].as_array().unwrap();
+        let albums = json["albums"].as_object().unwrap();
+        for disc in discs_array {
+            if !(disc.get("name").is_some()
+                && disc["name"].is_string()
+                && disc.get("file_name").is_some()
+                && disc["file_name"].is_string()
+                && AnyDiscDownloader::validate_file_name(disc["file_name"].as_str().unwrap())
+                && (disc.get("album").is_none() || disc["album"].is_string()))
+            {
+                return;
             }
         }
+        for (_, val) in albums {
+            if !(val.is_object()
+                && val.get("disc_file").is_some()
+                && AnyDiscDownloader::validate_file_name(val["disc_file"].as_str().unwrap()))
+            {
+                return;
+            }
+        }
+        self.discs.clear();
+        self.albums.clear();
+        for disc in discs_array {
+            self.discs.push(Disc::new(
+                disc["name"].as_str().unwrap_or("").to_string(),
+                disc["file_name"].as_str().unwrap_or("").to_string(),
+                disc["album"].as_str().unwrap_or("").to_string(),
+            ));
+        }
+        for (key, val) in albums.iter() {
+            self.albums.push(Album::new(
+                key.to_string(),
+                val["disc_file"].as_str().unwrap().to_string(),
+            ));
+        }
+        self.import_status = true;
     }
-    fn validate(&mut self) -> bool {
+    fn validate_app_state(&mut self) -> bool {
         if self.ogg_file_names.len() != self.ogg_paths.len() {
             return false;
         }
@@ -192,7 +220,7 @@ impl AnyDiscApp {
     }
 
     fn upload_data(&mut self) {
-        if !self.validate() {
+        if !self.validate_app_state() {
             self.upload_status = 0;
             return;
         }
@@ -319,6 +347,18 @@ impl eframe::App for AnyDiscApp {
                                         });
                                         disc_ui.horizontal(|disc_ui| {
                                             disc_ui.label("Album");
+                                            let mut is_valid_album = disc.album.is_empty();
+                                            if !is_valid_album {
+                                                for album in self.albums.iter() {
+                                                    if album.name == disc.album{
+                                                        is_valid_album = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if !is_valid_album{
+                                                disc.album = "".to_string();
+                                            }
                                             disc_ui.add_space(DISC_ALBUM_INDENT);
                                             egui::ComboBox::new(i, "Choose an Album")
                                             .selected_text(disc.album.to_string())
