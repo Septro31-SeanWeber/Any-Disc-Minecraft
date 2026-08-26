@@ -133,6 +133,35 @@ impl AnyDiscDownloader {
             .extract(Path::new(&AnyDiscDownloader::get_path_from_exe(dest)))
             .expect("failed to collect image data");
     }
+    pub fn validate_file_name(name: &str) -> bool {
+        // Check empty or too long (255 bytes max for most file systems)
+        if name.is_empty() || name.len() > 255 {
+            return false;
+        }
+
+        // Check for forbidden characters and control characters
+        let forbidden = ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>'];
+        if name.contains(&forbidden[..]) || name.chars().any(|c| c.is_control()) {
+            return false;
+        }
+
+        // Check for trailing spaces or dots
+        if name.ends_with(' ') || name.ends_with('.') {
+            return false;
+        }
+
+        // Check for Windows reserved names
+        let upper_name = name.to_uppercase();
+        let reserved = [
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+            "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        ];
+        if reserved.contains(&upper_name.as_str()) {
+            return false;
+        }
+
+        true
+    }
     pub fn download(
         discs: serde_json::Value,
         songs: HashSet<PathBuf>,
@@ -270,7 +299,6 @@ impl AnyDiscDownloader {
         }
         });
         let music_disc_11_vec = music_disc_11["model"]["entries"].as_array_mut().unwrap();
-
         let mut sounds = json!({});
         let sounds_obj = sounds.as_object_mut().unwrap();
 
@@ -324,7 +352,7 @@ impl AnyDiscDownloader {
                 //Create disc in album
                 if discs["albums"]
                     .get(disc["album"].as_str().unwrap())
-                    .is_none()
+                    .is_some()
                 {
                     let disc_file = discs["albums"][disc["album"].as_str().unwrap()]["disc_file"]
                         .as_str()
@@ -371,8 +399,11 @@ impl AnyDiscDownloader {
             }
 
             //check weight override
-            if disc.get("weight").is_some() {
-                weight = disc["weight"].as_f64().unwrap();
+            if disc.get("weight").is_some() && disc["weight"].is_f64() {
+                let test_weight = disc["weight"].as_f64().unwrap();
+                if test_weight > 0.0 {
+                    weight = disc["weight"].as_f64().unwrap();
+                }
             }
 
             //update creeper loot elements
