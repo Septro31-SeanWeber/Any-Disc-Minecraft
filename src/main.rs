@@ -71,15 +71,16 @@ struct AnyDiscApp {
     png_paths: HashSet<PathBuf>,
     ogg_file_names: HashSet<String>,
     png_file_names: HashSet<String>,
-    upload_status: i8,
-    status_delay: i8,
+    create_status: i8,
+    create_status_delay: i8,
     import_status: bool,
+    import_status_delay: i8,
 }
 
 impl AnyDiscApp {
     fn default() -> Self {
         Self {
-            upload_status: 1,
+            create_status: 1,
             albums: vec![Album::new("default".to_string(), "default".to_string())],
             png_paths: [PathBuf::from(AnyDiscDownloader::get_path_from_exe(
                 Path::new("image_data/default.png"),
@@ -88,7 +89,8 @@ impl AnyDiscApp {
             .collect(),
             png_file_names: ["default.png".to_string()].into_iter().collect(),
             import_status: true,
-            status_delay: 16,
+            import_status_delay: 16,
+            create_status_delay: 16,
             ..Default::default()
         }
     }
@@ -221,9 +223,9 @@ impl AnyDiscApp {
         true
     }
 
-    fn upload_data(&mut self) {
+    fn create_data(&mut self) {
         if !self.validate_app_state() {
-            self.upload_status = 0;
+            self.create_status = 0;
             return;
         }
         //make discs.json complete
@@ -237,7 +239,7 @@ impl AnyDiscApp {
         for disc in self.discs.iter() {
             if disc.view_name.is_empty() || disc.ogg_name.is_empty() || disc.ogg_name.contains(".")
             {
-                self.upload_status = 0;
+                self.create_status = 0;
                 return;
             }
             discs_array.push(json!(
@@ -251,7 +253,7 @@ impl AnyDiscApp {
         let albums = discs_json.get_mut("albums").unwrap();
         for album in self.albums.iter() {
             if album.name.is_empty() || album.png_name.is_empty() || album.png_name.contains(".") {
-                self.upload_status = 0;
+                self.create_status = 0;
                 return;
             }
             albums[album.name.clone()] = json!(
@@ -265,9 +267,9 @@ impl AnyDiscApp {
             self.png_paths.clone(),
         );
         match download {
-            Ok(_) => self.upload_status = 2,
+            Ok(_) => self.create_status = 2,
             Err(_) => {
-                self.upload_status = 0;
+                self.create_status = 0;
             }
         }
     }
@@ -292,7 +294,16 @@ impl eframe::App for AnyDiscApp {
                                 ));
                             }
                             if disc_header_ui.button("Import discs.json").clicked() {
+                                self.import_status_delay = 0;
                                 self.get_discs_import_data();
+                            }
+                            if self.import_status_delay >= 16{
+                                if !self.import_status{
+                                    disc_header_ui.label(egui::RichText::new("Import Invalid").color(egui::Color32::YELLOW));
+                                }
+                            }else{
+                                disc_header_ui.label("...");
+                                self.import_status_delay += 1;
                             }
                         });
                         disc_header_ui.add_space(HEADER_GAP);
@@ -577,18 +588,18 @@ impl eframe::App for AnyDiscApp {
                             create_ui.add_space(10.0);
                             create_ui.horizontal(|create_ui| {
                                 if create_ui.button("Create Packs").clicked() {
-                                    self.status_delay = 0;
-                                    self.upload_data();
+                                    self.create_status_delay = 0;
+                                    self.create_data();
                                 }
-                                if self.status_delay >= 16 {
-                                    if self.upload_status == 0 {
+                                if self.create_status_delay >= 16 {
+                                    if self.create_status == 0 {
                                         create_ui.label(egui::RichText::new("Creation Failed").color(egui::Color32::RED));
-                                    }else if self.upload_status == 2 {
+                                    }else if self.create_status == 2 {
                                         create_ui.label("Creation Successful");
                                     }
                                 }else{
                                     create_ui.label("...");
-                                    self.status_delay += 1;
+                                    self.create_status_delay += 1;
                                 }
                             });
                         },
