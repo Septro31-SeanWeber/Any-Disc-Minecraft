@@ -72,6 +72,7 @@ struct AnyDiscApp {
     ogg_file_names: HashSet<String>,
     png_file_names: HashSet<String>,
     upload_status: i8,
+    status_delay: i8,
     import_status: bool,
 }
 
@@ -87,6 +88,7 @@ impl AnyDiscApp {
             .collect(),
             png_file_names: ["default.png".to_string()].into_iter().collect(),
             import_status: true,
+            status_delay: 16,
             ..Default::default()
         }
     }
@@ -575,14 +577,18 @@ impl eframe::App for AnyDiscApp {
                             create_ui.add_space(10.0);
                             create_ui.horizontal(|create_ui| {
                                 if create_ui.button("Create Packs").clicked() {
+                                    self.status_delay = 0;
                                     self.upload_data();
                                 }
-                                if self.upload_status == 0 {
-                                    create_ui.label("Status: Creation Failed");
-                                }else if self.upload_status == 1 {
-                                    create_ui.label("Status: Ready");
+                                if self.status_delay >= 16 {
+                                    if self.upload_status == 0 {
+                                        create_ui.label(egui::RichText::new("Creation Failed").color(egui::Color32::RED));
+                                    }else if self.upload_status == 2 {
+                                        create_ui.label("Creation Successful");
+                                    }
                                 }else{
-                                    create_ui.label("Status: Creation Successful");
+                                    create_ui.label("...");
+                                    self.status_delay += 1;
                                 }
                             });
                         },
