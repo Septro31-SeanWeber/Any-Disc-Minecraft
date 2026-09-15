@@ -1,0 +1,27 @@
+name: Build and Release
+
+on:
+    push:
+        tags:
+            -'v*'
+
+permissions:
+    contents: write
+
+jobs:
+    build-and-release:
+        runs-on: windows-latest
+        steps:
+        - name: Build
+          run: cargo build --release --target x86_64-pc-windows-msvc
+        - name: Rename Executable
+          run: |
+            move target/x86_64-pc-windows-msvc/release/Any_Disc_Desktop.exe target/x86_64-pc-windows-msvc/release/Any_Disc_Desktop_${{ github.ref_name }}_windows.exe
+        - name: Release
+          uses: softprops/action-gh-release@v2
+          with:
+            name: "Any Disc Desktop ${{ github.ref_name}}"
+            files: |
+                target/x86_64-pc-windows-msvc/release/Any_Disc_Desktop_${{ github.ref_name }}_windows.exe
+
+
