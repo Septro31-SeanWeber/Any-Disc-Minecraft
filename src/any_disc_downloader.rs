@@ -205,10 +205,10 @@ impl AnyDiscDownloader {
         "type": "minecraft:entity",
         "pools": [
           {
-            "bonus_rolls": 0.0,
-            "conditions": [
+            "bonus_rolls": 0,
+            "condition":
               {
-                "condition": "minecraft:entity_properties",
+                "type": "minecraft:entity_properties",
                 "entity": "attacker",
                 "predicate":{
                   "equipment": {
@@ -225,24 +225,23 @@ impl AnyDiscDownloader {
                   }
                 }
               }
-            ],
+            ,
             "entries": [],
-            "rolls": 1.0
+            "rolls": 1
           },
           {
-            "bonus_rolls": 0.0,
+            "bonus_rolls": 0,
             "entries": [
               {
                 "type": "minecraft:item",
-                "functions": [
+                "modifier": [
                   {
-                    "add": false,
                     "count": {
                       "type": "minecraft:uniform",
                       "max": 2.0,
                       "min": 0.0
                     },
-                    "function": "minecraft:set_count"
+                    "type": "minecraft:set_count"
                   },
                   {
                     "count": {
@@ -251,33 +250,33 @@ impl AnyDiscDownloader {
                       "min": 0.0
                     },
                     "enchantment": "minecraft:looting",
-                    "function": "minecraft:enchanted_count_increase"
+                    "type": "minecraft:enchanted_count_increase"
                   }
                 ],
                 "name": "minecraft:gunpowder"
               }
             ],
-            "rolls": 1.0
+            "rolls": 1
           },
           {
-            "bonus_rolls": 0.0,
-            "conditions": [
+            "bonus_rolls": 0,
+            "condition":
               {
-                "condition": "minecraft:entity_properties",
+                "type": "minecraft:entity_properties",
                 "entity": "attacker",
                 "predicate": {
                   "minecraft:entity_type": "#minecraft:skeletons"
                 }
               }
-            ],
+            ,
             "entries": [
               {
                 "type": "minecraft:tag",
                 "expand": true,
-                "name": "minecraft:creeper_drop_music_discs"
+                "items": "#minecraft:creeper_drop_music_discs"
               }
             ],
-            "rolls": 1.0
+            "rolls": 1
           }
         ],
         "random_sequence": "minecraft:entities/creeper"
@@ -412,9 +411,9 @@ impl AnyDiscDownloader {
               "type": "minecraft:item",
               "weight": json!(weight),
               "name": "minecraft:music_disc_11",
-              "functions": [
+              "modifier": [
                 {
-                  "function": "minecraft:set_components",
+                  "type": "minecraft:set_components",
                   "components": {
                     "minecraft:custom_model_data": {
                       "floats": [json!(i+1)]
