@@ -20,6 +20,7 @@ jobs:
         - name: Release
           uses: softprops/action-gh-release@v2
           with:
+            name: "Any Disc Desktop ${{ github.ref_name}}"
             files: |
                 target/x86_64-pc-windows-msvc/release/Any_Disc_Desktop_${{ github.ref_name }}.exe
 
