@@ -1,9 +1,9 @@
 {
   "pack": {
-    "pack_format": 88,
+    "pack_format": 97.1,
     "min_format": 35,
-    "max_format": 88,
-    "supported_formats": {"min_inclusive": 35, "max_inclusive": 88},
-    "description": "Resource Pack for 26.2"
+    "max_format": 97.1,
+    "supported_formats": {"min_inclusive": 35, "max_inclusive": 97.1},
+    "description": "Resource Pack for 26.3"
   }
 }
