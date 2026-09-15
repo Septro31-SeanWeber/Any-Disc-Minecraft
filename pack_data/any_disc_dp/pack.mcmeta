@@ -4,6 +4,6 @@
         "min_format": 95,
         "max_format": 121.0,
         "supported_formats": {"min_inclusive": 95, "max_inclusive": 121.0},
-        "description": "Adds custom music discs"
+        "description": "Adds custom music discs for Minecraft 26.3"
     }
 }
