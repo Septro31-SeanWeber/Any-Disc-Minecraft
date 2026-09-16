@@ -41,3 +41,5 @@ in the same location as the application.
 ## Errors with the Tool
 This is a pretty early project and I don't doubt there may be cases that can break the tool. If you find any issue with the tool that isn't identified with red text, please contact me, Septro31-SeanWeber.
 
+## **OBTAINING CUSTOM DISCS IN MINECRAFT**
+To obtain the new music discs, you must give yourself a breeze rod and enchant it with **Mark of Music**, a new enchantment specific to Any Disc. by putting this enchanted breeze rod in your offhand, you have a 100% disc drop rate from creepers. Currently, you cannot use an enchantment table to enchant a breeze rod with Mark of Music, it must be done with `/enchant @s any_disc:mark_of_music`.
